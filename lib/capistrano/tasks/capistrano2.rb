@@ -9,7 +9,7 @@ Capistrano::Configuration.instance.load do
 
   _cset(:sidekiq_options) { nil }
 
-  _cset(:sidekiq_cmd) { "#{fetch(:bundle_cmd, 'bundle')} exec sidekiq" }
+  _cset(:sidekiq_cmd) { "#{fetch(:bundle_cmd, 'bundle')} exec sidekiq-daemon" }
   _cset(:sidekiqctl_cmd) { "#{fetch(:bundle_cmd, 'bundle')} exec sidekiqctl" }
 
   _cset(:sidekiq_timeout) { 10 }
@@ -51,13 +51,7 @@ Capistrano::Configuration.instance.load do
       args.push "--tag #{fetch(:sidekiq_tag)}" if fetch(:sidekiq_tag)
       args.push "--logfile #{fetch(:sidekiq_log)}" if fetch(:sidekiq_log)
       args.push fetch(:sidekiq_options)
-
-      if defined?(JRUBY_VERSION)
-        args.push '>/dev/null 2>&1 &'
-        logger.info 'Since JRuby doesn\'t support Process.daemon, Sidekiq will not be running as a daemon.'
-      else
-        args.push '--daemon'
-      end
+      args.push '--daemon'
 
       run "if [ -d #{current_path} ] && [ ! -f #{pid_file} ]; then cd #{current_path} ; #{fetch(:sidekiq_cmd)} #{args.compact.join(' ')} ; else echo 'Sidekiq is already running'; fi", pty: false
     end
