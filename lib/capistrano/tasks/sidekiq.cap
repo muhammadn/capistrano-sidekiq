@@ -9,8 +9,8 @@ namespace :load do
     set :sidekiq_role, -> { :app }
     set :sidekiq_processes, -> { 1 }
     # Rbenv and RVM integration
-    set :rbenv_map_bins, fetch(:rbenv_map_bins).to_a.concat(%w(sidekiq sidekiqctl))
-    set :rvm_map_bins, fetch(:rvm_map_bins).to_a.concat(%w(sidekiq sidekiqctl))
+    set :rbenv_map_bins, fetch(:rbenv_map_bins).to_a.concat(%w(sidekiq-daemon sidekiqctl))
+    set :rvm_map_bins, fetch(:rvm_map_bins).to_a.concat(%w(sidekiq-daemon sidekiqctl))
   end
 end
 
@@ -94,13 +94,7 @@ namespace :sidekiq do
     args.push "--concurrency #{fetch(:sidekiq_concurrency)}" if fetch(:sidekiq_concurrency)
     # use sidekiq_options for special options
     args.push fetch(:sidekiq_options) if fetch(:sidekiq_options)
-
-    if defined?(JRUBY_VERSION)
-      args.push '>/dev/null 2>&1 &'
-      warn 'Since JRuby doesn\'t support Process.daemon, Sidekiq will not be running as a daemon.'
-    else
-      args.push '--daemon'
-    end
+    args.push '--daemon'
 
     if fetch(:start_sidekiq_in_background, fetch(:sidekiq_run_in_background))
       background :bundle, :exec, :sidekiq, args.compact.join(' ')
