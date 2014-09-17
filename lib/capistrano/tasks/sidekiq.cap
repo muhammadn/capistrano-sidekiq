@@ -94,7 +94,7 @@ namespace :sidekiq-daemon do
     args.push "--concurrency #{fetch(:sidekiq_concurrency)}" if fetch(:sidekiq_concurrency)
     # use sidekiq_options for special options
     args.push fetch(:sidekiq_options) if fetch(:sidekiq_options)
-    args.push '--daemon'
+    # args.push '--daemon' # not required
 
     if fetch(:start_sidekiq_in_background, fetch(:sidekiq_run_in_background))
       background :bundle, :exec, :sidekiq, args.compact.join(' ')
