@@ -97,9 +97,9 @@ namespace :sidekiq do
     args.push '--daemon'
 
     if fetch(:start_sidekiq_in_background, fetch(:sidekiq_run_in_background))
-      background :bundle, :exec, :sidekiq-daemon, args.compact.join(' ')
+      background :bundle, :exec, 'sidekiq-daemon', args.compact.join(' ')
     else
-      execute :bundle, :exec, :sidekiq-daemon, args.compact.join(' ')
+      execute :bundle, :exec, 'sidekiq-daemon', args.compact.join(' ')
     end
   end
 
