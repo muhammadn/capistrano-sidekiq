@@ -10,21 +10,21 @@ namespace :load do
     set :sidekiq_processes, -> { 1 }
     # Rbenv and RVM integration
     set :rbenv_map_bins, fetch(:rbenv_map_bins).to_a.concat(%w(sidekiq-daemon sidekiqctl))
-    set :rvm_map_bins, fetch(:rvm_map_bins).to_a.concat(%w(sidekiq-daemoni sidekiqctl))
+    set :rvm_map_bins, fetch(:rvm_map_bins).to_a.concat(%w(sidekiq-daemon sidekiqctl))
   end
 end
 
 
 namespace :deploy do
   before :starting, :check_sidekiq_hooks do
-    invoke 'sidekiq-daemon:add_default_hooks' if fetch(:sidekiq_default_hooks)
+    invoke 'sidekiq:add_default_hooks' if fetch(:sidekiq_default_hooks)
   end
   after :publishing, :restart_sidekiq do
-    invoke 'sidekiq-daemon:restart' if fetch(:sidekiq_default_hooks)
+    invoke 'sidekiq:restart' if fetch(:sidekiq_default_hooks)
   end
 end
 
-namespace :sidekiq-daemon do
+namespace :sidekiq do
   def for_each_process(reverse = false, &block)
     pids = processes_pids
     pids.reverse! if reverse
@@ -59,10 +59,10 @@ namespace :sidekiq-daemon do
       if fetch(:sidekiq_use_signals)
         background "kill -TERM `cat #{pid_file}`"
       else
-        background :bundle, :exec, :sidekiqctl, 'stop', "#{pid_file}", fetch(:sidekiq_timeout)
+        background :bundle, :exec, 'sidekiq-daemon', 'stop', "#{pid_file}", fetch(:sidekiq_timeout)
       end
     else
-      execute :bundle, :exec, :sidekiqctl, 'stop', "#{pid_file}", fetch(:sidekiq_timeout)
+      execute :bundle, :exec, 'sidekiq-daemon', 'stop', "#{pid_file}", fetch(:sidekiq_timeout)
     end
   end
 
@@ -71,7 +71,7 @@ namespace :sidekiq-daemon do
       background "kill -USR1 `cat #{pid_file}`"
     else
       begin
-        execute :bundle, :exec, :sidekiqctl, 'quiet', "#{pid_file}"
+        execute :bundle, :exec, 'sidekiq-daemon', 'quiet', "#{pid_file}"
       rescue SSHKit::Command::Failed
         # If gems are not installed eq(first deploy) and sidekiq_default_hooks as active
         warn 'sidekiqctl not found (ignore if this is the first deploy)'
@@ -94,12 +94,12 @@ namespace :sidekiq-daemon do
     args.push "--concurrency #{fetch(:sidekiq_concurrency)}" if fetch(:sidekiq_concurrency)
     # use sidekiq_options for special options
     args.push fetch(:sidekiq_options) if fetch(:sidekiq_options)
-    # args.push '--daemon' # not required
+    args.push '--daemon'
 
     if fetch(:start_sidekiq_in_background, fetch(:sidekiq_run_in_background))
-      background :bundle, :exec, :sidekiq, args.compact.join(' ')
+      background :bundle, :exec, :sidekiq-daemon, args.compact.join(' ')
     else
-      execute :bundle, :exec, :sidekiq, args.compact.join(' ')
+      execute :bundle, :exec, :sidekiq-daemon, args.compact.join(' ')
     end
   end
 
@@ -147,8 +147,8 @@ namespace :sidekiq-daemon do
 
   desc 'Restart sidekiq'
   task :restart do
-    invoke 'sidekiq-daemon:stop'
-    invoke 'sidekiq-daemon:start'
+    invoke 'sidekiq:stop'
+    invoke 'sidekiq:start'
   end
 
   desc 'Rolling-restart sidekiq'
@@ -177,7 +177,7 @@ namespace :sidekiq-daemon do
   # TODO : Don't start if all proccess are off, raise warning.
   desc 'Respawn missing sidekiq proccesses'
   task :respawn do
-    invoke 'sidekiq-daemon:cleanup'
+    invoke 'sidekiq:cleanup'
     on roles fetch(:sidekiq_role) do
       for_each_process do |pid_file, idx|
         unless pid_file_exists?(pid_file)
